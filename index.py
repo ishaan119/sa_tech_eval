@@ -262,20 +262,24 @@ def extract_data():
                 }
             }), 404
         
-        # LPUSH on OSS means the list is already stored in reverse order (100, 99, ..., 1)
-        # LRANGE extracts them in that order, achieving the "reverse" requirement.
-        reverse_values = redis_enterprise.lrange('numbers_list', 0, -1)
-        values_as_int = [int(v) for v in reverse_values]
+        # Retrieve the list from Redis.
+        # The values were inserted with RPUSH, so they are in insertion order (e.g., 1, 2, 3...).
+        values = redis_enterprise.lrange('numbers_list', 0, -1)
+        values_as_int = [int(v) for v in values]
+        
+        # Reverse the list to fulfill the "extract in reverse order" requirement.
+        values_as_int.reverse()
+        
         end_time = time.time()
         
         return jsonify({
             'status': 'success',
-            'message': f'Successfully extracted {len(values_as_int)} values from Redis Enterprise.',
+            'message': f'Successfully extracted {len(values_as_int)} values from Redis Enterprise in reverse order.',
             'data': {
                 'redis_key': 'numbers_list',
                 'total_items_extracted': len(values_as_int),
                 'values': values_as_int,
-                'note': 'Values were inserted with RPUSH on Redis OSS and are presented here in the order they were retrieved from Redis Enterprise.',
+                'note': 'Values were retrieved from Redis Enterprise and then reversed in the application.',
                 'execution_time_seconds': f"{end_time - start_time:.4f}",
                 'source_server': f"{REDIS_ENTERPRISE_HOST}:{REDIS_ENTERPRISE_PORT}",
                 'timestamp_utc': datetime.utcnow().isoformat()
